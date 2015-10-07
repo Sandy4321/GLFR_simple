@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <math.h>
+#include <string.h>
 
 #define N_max 5000 // maximum number of nodes
 #define n_max 500 // maximum number of communities 
@@ -22,10 +23,10 @@ typedef struct edgepair{
 };
 struct edgepair lsgraph[N_max]; // edge list for the graph
 
-unsigned int N;
-unsigned char k_avg, kmin = 1, kmax=50, smin, smax;
+unsigned int N=1000;
+unsigned char k_avg=20, kmin = 1, kmax=50, smin=20, smax=100;
 double gamma = 2.0, beta = 2.0; // exponents of the power law distributions for node degree and community size
-double mu, half_range; // mean and half-range of the uniform distribution for the fractions of external links of communities
+double mu=0.5, delta=0.5; // mean and half-range of the uniform distribution for the fractions of external links of communities
 float interval= 0.025; // minimum distance between any two different fractions of external links of communities
 
 unsigned int n; // number of communities
@@ -349,26 +350,23 @@ double round1000(double val){
 	return (double)round(val * 1000) / 1000;
 }
 
-void generate_network(unsigned int N2, unsigned char k_avg, unsigned char smin, unsigned char smax, double mu, double half_range, double gamma, double beta){
+void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, unsigned char smin, unsigned char smax, double mu, double delta, double gamma, double beta){
         
-        N = N2;
 	// display the network information
 	printf("\nnetwork information:\n\n");
         printf("----------------------------------------\n");
-	printf("number of nodes= %d\n", N);
-	printf("average node degree= %d\n", k_avg);
+	printf("number of nodes= %d\n", N); // =1000 by default
+	printf("average node degree= %d\n", k_avg); // =20 by default
 	printf("maximum node degree= %d\n", kmax); // =50 by default
 	printf("exponent for the degree distribution= %.2f\n", -gamma); // =2.0 by default
 	printf("exponent for the community size distribution= %.2f\n", -beta);  // =2.0 by default
-	printf("minimum community size= %d\n", smin);
-	printf("maximum community size= %d\n", smax);
-        printf("average of the fractions of external links of communities= %.2f\n", mu);
-        printf("maximum up and down from the average for the fractions= %.2f\n", half_range);
+	printf("minimum community size= %d\n", smin); // =20 by default
+	printf("maximum community size= %d\n", smax); // =100 by default
+        printf("average of the fractions of external links of communities= %.2f\n", mu); // =0.5 by default
+        printf("maximum up and down from the average for the fractions= %.2f\n", delta); // =0.5 by default
 	printf("----------------------------------------\n");
         
-	kmin = solve_dmin(kmax, k_avg, -gamma) + 1; // take care if the exponent >0
-        
-	//printf("adjusted [kmin,kmax]= [%d, %d]\n", kmin, kmax);
+	kmin = solve_dmin(kmax, k_avg, -gamma) + 1; // adjust kmin to keep the average degree as expected by k_avg
                 
         // generate node degrees following a power law distribution		
 	m = 0;
@@ -453,14 +451,14 @@ void generate_network(unsigned int N2, unsigned char k_avg, unsigned char smin, 
         
 	double mixing_min, mixing_max, mu_expected=0, mu_actual = 0;		
 
-	// generate mixing for each community randomly from mu +/- half_range			
+	// generate mixing for each community randomly from mu +/- delta			
 
         if (mu <left) mu = left;
 	if (mu > right) mu = right;
         
         // calculate the left bound and the right bound of the range of the uniform distribution
-	mixing_min = mu - half_range;
-	mixing_max = mu + half_range;
+	mixing_min = mu - delta;
+	mixing_max = mu + delta;
 
 	// adjust the range if it contains the values that less then the minimum valid value
 	if (mixing_min < left){
@@ -594,7 +592,7 @@ void generate_network(unsigned int N2, unsigned char k_avg, unsigned char smin, 
         FILE *fcommunity, *fnetwork, *fstatistic;
         char fname_community[250], fname_network[250], fname_statistic[250];
 
-	sprintf(fname, "N%d_k%d_kmax%d_smin%d_smax%d_mu%.2f_fhalf-range%.2f", N, k_avg, kmax, smin, smax, mu, half_range);
+	sprintf(fname, "N%d_k%d_kmax%d_smin%d_smax%d_mu%.2f_fhalf-range%.2f", N, k_avg, kmax, smin, smax, mu, delta);
 
 	sprintf(fname_community, "%s%s", fname, "_community.dat");
 	sprintf(fname_network, "%s%s", fname, "_network.dat");
@@ -612,17 +610,69 @@ void generate_network(unsigned int N2, unsigned char k_avg, unsigned char smin, 
 		if (lsgraph[i].flag == true) fprintf(fnetwork, "%d %d\n", lsgraph[i].end1 + 1, lsgraph[i].end2 + 1);
 	}
 	fclose(fnetwork);
+        
+        printf("-------------------------------------------\n");
+        printf("total number of nodes in the network: %d\n", N);
+        printf("total number of edges in the network: %d\n", ml);
+}
+
+int parameter(char *st){
+    if (strcmp(st, "-N")==0) return 1;
+    if (strcmp(st, "-k")==0) return 2;
+    if (strcmp(st, "-kmax")==0) return 3;
+    if (strcmp(st, "-smin")==0) return 4;
+    if (strcmp(st, "-smax")==0) return 5;
+    if (strcmp(st, "-mu")==0) return 6;
+    if (strcmp(st, "-delta")==0) return 7;
+    if (strcmp(st, "-gamma")==0) return 8;
+    if (strcmp(st, "-beta")==0) return 9;
+    return 0;
 }
 
 int main(int argc, char** argv) {    
     
     time_t t;
     srand((unsigned)time(&t));
-
-    generate_network(500, 20, 20, 100, 0.8, 0.15, 2, 2);    
     
-    printf("press any key to exit!\n");
-    getchar();
+    int i=1;
+    while (i< argc){
+        //printf("argv[%d]= %s\n", i, argv[i]);        
+        switch(parameter(argv[i])){
+            case 1:
+                N = atoi(argv[i+1]);
+                break;
+            case 2:
+                k_avg = atoi(argv[i+1]);
+                break;
+            case 3:
+                kmax = atoi(argv[i+1]);
+                break;
+            case 4:
+                smin = atoi(argv[i+1]);
+                break;
+            case 5:
+                smax = atoi(argv[i+1]);
+                break;
+            case 6:
+                mu = atof(argv[i+1]);
+                break;
+            case 7:
+                delta = atof(argv[i+1]);
+                break;
+            case 8:
+                gamma = atof(argv[i+1]);
+                break;
+            case 9:
+                beta = atof(argv[i+1]);
+                break;
+            default:
+                printf("%s is a wrong input parameter, a default value may be used!\n", argv[i]);
+        }
+        i = i+2;
+    }
+    
+    generate_network(N, k_avg, kmax, smin, smax, mu, delta, gamma, beta);
+    
     return (EXIT_SUCCESS);
 }
 
