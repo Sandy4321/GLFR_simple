@@ -1,3 +1,17 @@
+/*    
+This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/  
 /* 
  * File:   main.c
  * Author: Ba-Dung
@@ -22,7 +36,7 @@ typedef struct edgepair{
 	bool flag;
 };
 struct edgepair lsgraph[m_max]; // edge list for the graph
-unsigned long m, ml; // the number of edges in the graph, the number of edges in each subgraph
+unsigned long m, ml; // the expected number of edges in the graph, the number of edges created
 
 unsigned int N=1000; // number of nodes
 unsigned char k_avg=20, kmin = 1, kmax=50, smin=20, smax=100;
@@ -42,14 +56,14 @@ unsigned int membership[N_max]; // community memberships of nodes
 unsigned char k[N_max], k_int[N_max]; // node degrees, internal degrees of nodes
 double k_int_assigned[N_max]; // expected degrees of nodes
 
-// check if the two edges have the same end points
+// check if two edges have the same end points
 bool duplicated_edge(struct edgepair edge1, struct edgepair edge2){
 	if ((edge1.end1 == edge2.end1) && (edge1.end2 == edge2.end2)) return true;
 	if ((edge1.end1 == edge2.end2) && (edge1.end2 == edge2.end1)) return true;
 	return false;
 }
 
-// check if one edge is a multi-edge in a list
+// check if one edge is a multi-edge in a list in which each two consequence elements represent two end points of an edge
 bool multi_edge(struct edgepair edge, unsigned int stubs[], unsigned int pos1, unsigned int pos2){	
 	unsigned int i = pos1;
 	while (i<pos2){
@@ -176,7 +190,7 @@ void generate_internal_links(){
 	}
 
 	//printf("total number of edges of the internal graphs= %d\n", ml);
-	printf("number of self-edges and number of multi-edges within communities= (%d, %d)\n", n_self_edges, n_multi_edges);
+	//printf("number of self-edges and number of multi-edges within communities= (%d, %d)\n", n_self_edges, n_multi_edges);
 }
  
 void generate_external_links(){		
@@ -292,7 +306,7 @@ void generate_external_links(){
 		}
 	}
         //printf("total number of edges of the external graph= %d\n", ml-mltemp);
-	printf("number of self-edges and number of multi-edges between communities= (%d,%d)\n", n_self, n_multi);
+	//printf("number of self-edges and number of multi-edges between communities= (%d,%d)\n", n_self, n_multi);
 }
 
 // this part of code is based on the source code of the LFR-benchmark at https://sites.google.com/site/andrealancichinetti/files
@@ -339,14 +353,14 @@ double solve_dmin(double dmax, double dmed, double gamma) {
 }
 // end of the part of the source code
 
-double round1000(double val){
-	return (double)round(val * 1000) / 1000;
+
+double round1e7(double val){
+	return (double)round(val * 1e7) / 1e7;
 }
 
 void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, unsigned char smin, unsigned char smax, double mu, double delta, double gamma, double beta){
         
-	// display the network information
-        printf("----------------------------------------\n");    
+	// display the network information        
 	printf("network information:\n");        
 	printf("number of nodes= %d\n", N); // =1000 by default
 	printf("average node degree= %d\n", k_avg); // =20 by default
@@ -357,7 +371,7 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	printf("maximum community size= %d\n", smax); // =100 by default
         printf("average of the fractions of external links of communities= %.2f\n", mu); // =0.5 by default
         printf("maximum up and down from average for the fractions= %.2f\n", delta); // =0.5 by default
-	printf("----------------------------------------\n");
+        printf("----------------------------------------\n");    
         
 	kmin = solve_dmin(kmax, k_avg, -gamma) + 1; // adjust kmin to keep the average degree as expected by k_avg
                 
@@ -365,8 +379,17 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	m = 0;
 	for (unsigned int i = 0; i < N; i++){
 		double y = (double)(rand() % N + 1) / N;
-		double exp = pow((pow(kmax, -gamma + 1) - pow(kmin, -gamma + 1))*y + pow(kmin, -gamma + 1), (double)1 / (-gamma + 1));
+                double exp;
+                if (gamma==1){
+                    // node degrees follow a uniform distribution
+                    exp = rand() % (kmax-kmin+1) + kmin;
+                }
+                else{
+                    // node degrees follow a power law distribution
+                    exp = pow((pow(kmax, -gamma + 1) - pow(kmin, -gamma + 1))*y + pow(kmin, -gamma + 1), (double)1 / (-gamma + 1));
+                }    
 		k[i] = round(exp);
+                //printf("k[%d]= %d\n", i, k[i]);
 		m = m + k[i];
 	}
 
@@ -383,14 +406,22 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 			}
 			else{
 				int max_c = N / smin;
-				double y = (double)(rand() % max_c + 1) / max_c;
-				double exp = pow((pow(smax, -beta + 1) - pow(smin, -beta + 1))*y + pow(smin, -beta + 1), (double)1 / (-beta + 1));
+				double y = (double)(rand() % max_c + 1) / max_c;  
+                                double exp;
+                                if (beta==1){
+                                    // community sizes follow a uniform distribution
+                                    exp = rand() % (smax-smin+1) + smin;
+                                }
+                                else{
+                                    // community size follow a power law distribution
+                                    exp = pow((pow(smax, -beta + 1) - pow(smin, -beta + 1))*y + pow(smin, -beta + 1), (double)1 / (-beta + 1));
+                                }
 				s[i] = round(exp);
+                                //printf("s[%d]= %d\n", i, s[i]);
 			}
 			Ntemp = Ntemp - s[i];
 			i++;
-	}
-
+	}        
 	n = i;	
 
 	unsigned int index = 0;
@@ -451,7 +482,7 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	mixing_min = mu - delta;
 	mixing_max = mu + delta;
 
-	// adjust the range if it contains the invalid values for the fractions
+	// adjust the range if it contains invalid values for the fractions
 	if (mixing_min < left){
 		mixing_min = left;
 		mixing_max = mu + mu - mixing_min;
@@ -471,13 +502,13 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	}		
 		
         // if the average of the fractions assigned for communities is different from mu
-        // reduce the gap to control the ambiguity of the community structure				
+        // reduce the gap between the generated value and the expected value to control the ambiguity of the community structure				
 		bool exit = false;
 
 		while ((fabs(mu - mu_avg / n) >= 0.0045) && (!exit)){					
 			int pos = rand() % n;
 			if ((mu - mu_avg / n) >= 0.0045){
-				if (round1000(mu_c[pos]) < round1000(mixing_max)){	
+				if (round1e7(mu_c[pos]) < round1e7(mixing_max)){	
 							mu_c[pos] = mu_c[pos] + 0.025;	
 							mu_avg = mu_avg + 0.025;	
 							if ((mu - mu_avg / n) <0){
@@ -486,7 +517,7 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 				}						
 			}
 			else{
-				if (round1000(mu_c[pos]) > round1000(mixing_min)){
+				if (round1e7(mu_c[pos]) > round1e7(mixing_min)){
 							mu_c[pos] = mu_c[pos] - 0.025;
 							mu_avg = mu_avg - 0.025;
 							if ((mu - mu_avg / n) >0){
@@ -496,16 +527,9 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 			}                    
 		}	
 			
-	// at this stage, we already have individual fractions of external links of communities
+	// at this stage, we already have individual fractions of external links assigned for communities
 			
-	mu_avg = mu_avg / n;			
-
-	//printf("mu= %.3f, mixing_min= %.3f, mixing_max= %.3f, mu_avg= %.3f\n",mu, mixing_min, mixing_max, mu_avg);			
-                
-        for (i = 0; i < n; i++){
-		Kc_int[i] = 0;
-		Kc_int_assigned[i] = 0;
-        }
+	mu_avg = mu_avg / n;				
 
 	// calculating the internal degree and external degree for nodes
 	for (i = 0; i < N; i++){
@@ -531,9 +555,6 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
                         }
                 }
 
-                Kc_int_assigned[membership[i]] = Kc_int_assigned[membership[i]] + k_int_assigned[i];                
-		Kc_int[membership[i]] = Kc_int[membership[i]] + k_int[i];
-		
                 mu_actual = mu_actual + (double)(k[i] - k_int[i]) / k[i];
 	}
 
@@ -579,7 +600,7 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	sprintf(fname_network, "%s%s", fname, "_network.dat");
 	sprintf(fname_statistic, "%s%s", fname, "_statistic.dat");
 
-	// exporting the network
+	// export only the edges that have flag=true to create the network
 	fcommunity = fopen(fname_community, "w");
 	for (i = 0; i < N; i++){
 		fprintf(fcommunity, "%d %d\n", i + 1, membership[i] + 1);
@@ -596,7 +617,6 @@ void generate_network(unsigned int N, unsigned char k_avg, unsigned char kmax, u
 	}
 	fclose(fnetwork);
         
-        printf("-------------------------------------------\n");
         printf("number of nodes in the network: %d\n", N);        
         printf("number of edges in the network: %d\n", mltemp);
         printf("average node degree= %.2f\n", (float)2*m/N);
@@ -621,41 +641,42 @@ int main(int argc, char** argv) {
     time_t t;
     srand((unsigned)time(&t));
     
-    int i=1;
-    while (i< argc){
+    int i_arg=1;
+    while (i_arg< argc){
         //printf("argv[%d]= %s\n", i, argv[i]);        
-        switch(parameter(argv[i])){
+        switch(parameter(argv[i_arg])){
             case 1:
-                N = atoi(argv[i+1]);
+                N = atoi(argv[i_arg+1]);
                 break;
             case 2:
-                k_avg = atoi(argv[i+1]);
+                k_avg = atoi(argv[i_arg+1]);
                 break;
             case 3:
-                kmax = atoi(argv[i+1]);
+                kmax = atoi(argv[i_arg+1]);
                 break;
             case 4:
-                smin = atoi(argv[i+1]);
+                smin = atoi(argv[i_arg+1]);
                 break;
             case 5:
-                smax = atoi(argv[i+1]);
+                smax = atoi(argv[i_arg+1]);
                 break;
             case 6:
-                mu = atof(argv[i+1]);
+                mu = atof(argv[i_arg+1]);
                 break;
             case 7:
-                delta = atof(argv[i+1]);
+                delta = atof(argv[i_arg+1]);
                 break;
             case 8:
-                gamma = atof(argv[i+1]);
+                gamma = atof(argv[i_arg+1]);
                 break;
             case 9:
-                beta = atof(argv[i+1]);
+                beta = atof(argv[i_arg+1]);
                 break;
             default:
-                printf("%s is a wrong input parameter, a default value may be used!\n", argv[i]);
+                printf("%s is a wrong input parameter, see the Readme.txt file for more information!\n", argv[i_arg]);
+                return (EXIT_SUCCESS);
         }
-        i = i+2;
+        i_arg = i_arg+2;
     }
     
     generate_network(N, k_avg, kmax, smin, smax, mu, delta, gamma, beta);
