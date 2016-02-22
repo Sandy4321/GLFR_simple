@@ -17,6 +17,7 @@ This program is free software: you can redistribute it and/or modify
  * Author: Ba-Dung
  *
  * Created on October 6, 2015, 3:48 PM
+ * for network sizes<5000 nodes
  */
 
 #include <stdio.h>
@@ -26,9 +27,9 @@ This program is free software: you can redistribute it and/or modify
 #include <math.h>
 #include <string.h>
 
-#define N_max 10000 // maximum number of nodes
+#define N_max 20000 // maximum number of nodes
 #define n_max 500 // maximum number of communities 
-#define m_max 200000 // maximum number of edges (the average of node degrees should be less than 40)
+#define m_max 250000 // maximum number of edges
 
 typedef struct edgepair{
 	unsigned int end1;
@@ -40,7 +41,7 @@ unsigned long m, ml; // the expected number of edges in the graph, the number of
 
 unsigned int N=1000; // number of nodes
 unsigned char k_avg=20, kmin = 1, kmax=50, smin=20, smax=100;
-double gamma = 2.0, beta = 2.0; // exponents of the power law distributions for node degree and community size
+double gam_ma = 2.0, beta = 2.0; // exponents of the power law distributions for node degree and community size
 double mu=0.5, delta=0.5; // mean and half-range of the uniform distribution for the fractions of external links of communities
 float interval= 0.025; // minimum distance between any two different fractions of external links of communities
 
@@ -667,7 +668,7 @@ int main(int argc, char** argv) {
                 delta = atof(argv[i_arg+1]);
                 break;
             case 8:
-                gamma = atof(argv[i_arg+1]);
+                gam_ma = atof(argv[i_arg+1]);
                 break;
             case 9:
                 beta = atof(argv[i_arg+1]);
@@ -679,7 +680,7 @@ int main(int argc, char** argv) {
         i_arg = i_arg+2;
     }
     
-    generate_network(N, k_avg, kmax, smin, smax, mu, delta, gamma, beta);
+    generate_network(N, k_avg, kmax, smin, smax, mu, delta, gam_ma, beta);
     
     return (EXIT_SUCCESS);
 }
