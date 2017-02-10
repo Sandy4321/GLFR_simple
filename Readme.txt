@@ -8,4 +8,4 @@ Network parameters:
 -gamma: exponent for degree sequence
 -beta: exponent for communiy size sequence
 -mu: average of the fractions of external links of communities
--delta: maximum up and down from the average from the fractions of external links of communities
+-delta: maximum distance from the fractions of external links of communities to mu
