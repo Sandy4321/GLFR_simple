@@ -1,3 +1,5 @@
+This is a simple implemenation of the GLFR benchmark which generates synthetic networks with community structure for testing community detection algorithms.
+
 Network parameters:
 
 -N: number of nodes
